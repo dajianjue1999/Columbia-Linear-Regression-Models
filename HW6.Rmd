@@ -1,0 +1,28 @@
+---
+title: "hw6"
+author: "Daoyang E"
+date: "11/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### a
+
+the function would be $Y = \beta_0 + \beta_1*X_1 + \beta_2*X_2 + \beta_3*X_3$
+
+### b
+
+The response function for Commercial banking is $Y = \beta_0 + \beta_1*X_1 + \beta_2$
+The response function for Mutual savings banking is $Y = \beta_0 + \beta_1*X_1 + \beta_3$
+The response function for Savings and loan banking is $Y = \beta_0 + \beta_1*X_1 - \beta_2 - \beta_3$
+
+### c
+
+1. $\beta_2$ is the differential effect between commercial banking and average intercept of the regression line on the height of response function for any level of $X_1$
+
+2. $\beta_3$ is the differential effect between mutual saving banking and average intercept of the regression line on the height of response function for any level of $X_1$
+
+3. $-\beta_2-\beta_3$ is the differential effect between savings and loan banking and average intercept of the regression line on the height of response function for any level of $X_1$

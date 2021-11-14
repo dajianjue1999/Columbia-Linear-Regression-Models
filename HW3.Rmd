@@ -1,0 +1,219 @@
+---
+title: "HW3"
+author: "Daoyang E"
+date: "10/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1
+```{r}
+library(readxl)
+CH03 <- read_excel("C:/Users/edaoy/Desktop/5205/CH03.xlsx", 
+    col_names = c("Y1","X1","X2","X3"))
+View(CH03)
+```
+
+### a
+```{r}
+library(graphics)
+dot <- dotchart(CH03$X1)
+dot
+```
+
+From the dot plot, I can see how many cases are there for each number of X1. And there seems to be no outlying case in this dot plot.
+
+### b
+```{r}
+library(ggplot2)
+time <- 1:nrow(CH03)
+CH03 <- cbind(time, CH03)
+timeplot1 <- ggplot(CH03, aes(x = time, y = X1)) + 
+  geom_point()
+timeplot1
+```
+
+My plot shows there is no correlation between the number of copiers serviced and time.
+
+
+### c
+
+```{r}
+model1 <- lm(Y1~X1, CH03)
+summary(model1)
+CH03$residuals <- model1$residuals
+```
+
+```{r}
+stem_and_leaf <- stem(model1$residuals, scale = 1, atom = 1e-08)
+```
+
+The stem and leaf plot of residuals show that the residuals generally follow normal distribution.
+
+### d
+
+```{r}
+CH03$Y1_hat <- model1$coefficients[1] + model1$coefficients[2]*CH03$X1
+
+```
+
+```{r}
+residual_plot1 <- ggplot(CH03, aes(x = Y1_hat, y = residuals))+
+  geom_point()+
+  ggtitle("residual plot of residual versus Y1 predicted")
+residual_plot1
+```
+
+```{r}
+residual_plot2 <- ggplot(CH03, aes(x = X1, y = residuals))+
+  geom_point()+
+  ggtitle("residual plot of residual versus X1")
+residual_plot2
+```
+
+The variance of residuals seem to remain constant under changes of X1 and Y1 predicted. There also seem to be outliers in both graphs, as most of the residuals are be between -15 and 15, but there does exist point over 20. Overall, I don't think there is departure from the regreesion model in (2.1) except for the outliers. Both of the graph provide the same information.
+
+### e
+
+```{r}
+new_resid <- sort(CH03$residuals)
+z = 1:45
+for(i in 1:45){
+  z[i] = qnorm((i-0.375)/(45+0.25))
+}
+MSE <- sum((model1$residuals^2)/43)
+
+expected = 1:45
+for(i in 1:45){
+  expected[i] <- z[i] * sqrt(MSE)
+}
+plot(expected, new_resid, xlab = "Expected", ylab = "Residual", main = "Normal Probability Plot")
+```
+
+```{r}
+cor(new_resid, expected)
+```
+
+The correlation coefficient here is 0.9891, where the critical value would be about 0.977. 0.9891 > 0.977, thus the assumption of normality holds.
+
+### f
+
+```{r}
+plot(CH03$time, CH03$residuals, xlab = "time", ylab = "residuals", main = "Time vs Residual")
+```
+
+There seems to be no evidence that time and residuals are correlated.
+
+### g
+
+```{r}
+library(lmtest)
+bptest(model1, studentize = FALSE)
+```
+
+```{r}
+qchisq(0.95, df = 1)
+```
+
+
+The null hypothesis is the error variance is constant, the alternative hypothesis is the error variance is not constant. Here BP 1.3147 < 3.8415, which is the critical value. Thus I fail to reject the null hypothesis and conclude that the error variance is constant.
+
+### h
+```{r}
+plot(CH03$X2, CH03$residuals, xlab = "operational age in months", ylab = "residuals", main = "operational age vs residuals")
+```
+
+```{r}
+plot(CH03$X3, CH03$residuals, xlab = "years for service person", ylab = "residuals", main = "service person years vs residuals")
+```
+
+The plot "operational age vs residuals" shows that there exists a linear relation between operational age in months and residuals, while the plot "service person years vs residuals" does not show a relation between years of experience of the service person and residuals. Thus I would conclude that including X2, which is mean operational age of copiers would improve the model.
+
+
+## 2
+
+### a
+```{r}
+library(tibble)
+sales <- tribble(
+  ~i, ~Xi, ~Yi,
+  1,  0,  98,
+  2,  1,  135,
+  3,  2,  162,
+  4,  3,  178,
+  5,  4,  221,
+  6,  5,  232,
+  7,  6,  283,
+  8,  7,  300,
+  9,  8,  374,
+  10,  9,  395
+)
+```
+
+```{r}
+plot(sales$Xi, sales$Yi, xlab = "years", ylab = "sales(thousand)", main = "years vs sales")
+```
+
+A linear relation seems to be adequate here.
+
+### b
+
+```{r}
+library(MASS)
+bc <- boxcox(Yi ~ Xi, data = sales)
+(lambda <- bc$x[which.max(bc$y)])
+```
+
+I can see that the best lambda here would be 0.505, from the question, lambda = 0.5 would be the transformation of Y, which means that square root of y would be used.
+
+### c
+
+```{r}
+sales$Y_trans <- sqrt(sales$Yi)
+model2 <- lm(Y_trans ~ Xi, sales)
+summary(model2)
+```
+
+For transformed data, the linear regression function is $Yi_{trans} = 10.261+1.076*X_i$
+
+### d
+
+```{r}
+plot(x = sales$Xi, y = sales$Y_trans, xlab = "years", ylab = "square root of sales")
+lines(sales$Xi, fitted(model2))
+```
+
+The regression line appears to be a good fit to the transformed data.
+
+### e
+
+```{r}
+sales$residuals <- model2$residuals
+sales$Y_transpre <- model2$fitted.values
+plot(x = sales$Y_transpre, y = sales$residuals, xlab = "Fitted", ylab = "resid", main = "Fitted vs Residuals")
+```
+
+```{r}
+resid_new <- sort(sales$residuals)
+k = 1:10
+for(i in 1:10){
+  k[i] = qnorm((i-0.375)/(10+0.25))
+}
+MSE1 <- sum((model2$residuals^2)/8)
+
+expected_r = 1:10
+for(i in 1:10){
+  expected_r[i] <- k[i] * sqrt(MSE1)
+}
+plot(expected_r, resid_new, xlab = "Expected", ylab = "Residuals", main = "Normal Probability Plot")
+```
+
+There is no relation between the residual and the Fitted value, which is as expected. And the normal probability plot also shows that the residuals are generally in accordance with the expected values of residuals of a normal distribution.
+
+### f
+
+Since $Yi_{trans} = 10.261+1.076*X_i$ and $Yi_{trans}= \sqrt{Y_i}$, so I would square the estimated regression function, and it gives $Y_i = 105.288+22.082X+1.158X^2$.
+

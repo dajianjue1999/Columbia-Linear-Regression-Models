@@ -1,0 +1,144 @@
+---
+title: "hw4"
+author: "Daoyang E"
+date: "10/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tibble)
+tibble2 <- tribble(
+  ~i, ~X_i,  ~Y_i,
+  1, 1, 16,
+  2, 0, 9,
+  3, 2, 17,
+  4, 0, 12,
+  5, 3, 22,
+  6, 1, 13,
+  7, 0, 8,
+  8, 1, 15,
+  9, 2, 19,
+  10, 0, 11
+)
+```
+
+```{r}
+X <- matrix(c(1,1,1,1,1,1,1,1,1,1,1,0,2,0,3,1,0,1,2,0), nrow = 10, ncol = 2)
+Y <- matrix(c(16, 9,17,12,22,13,8,15,19,11), nrow = 10, ncol = 1)
+```
+
+```{r}
+X_trans <- t(X)
+```
+
+### a 1
+```{r}
+library(matlib)
+inv(X_trans %*% X)
+```
+
+Answer for a(1) is $\begin{pmatrix}0.2&-0.1\\ -0.1&0.1\end{pmatrix}$
+
+### a 2
+
+```{r}
+b <- inv(X_trans %*% X) %*% X_trans %*% Y
+b
+```
+
+Answer for a(2) is $\begin{pmatrix}10.2\\ 4.0\end{pmatrix}$
+
+### a 3
+
+```{r}
+e <- Y - X %*% b
+e
+```
+
+Answer for a(3) is $\begin{pmatrix}1.8\\ -1.2\\ -1.2\\ 1.8\\ -0.2\\ -1.2\\ -2.2\\ 0.8\\ 0.8\\ 0.8\end{pmatrix}$
+
+### a 4
+
+```{r}
+H <- X %*% inv(X_trans %*% X) %*% X_trans
+H
+```
+
+Answer for a 4 is just denoted in the R output. H is a 10 * 10 matrix.
+
+### a 5
+
+```{r}
+SSE <- t(e) %*% e
+SSE
+```
+
+The answer for a(5), SSE is 17.6
+
+### a 6
+
+```{r}
+model1 <- lm(Y ~ X, tibble2)
+anova(model1)
+```
+
+I see MSE in anova table is 2.2.
+
+```{r}
+MSE <- 2.2
+s_square_b <- MSE * inv(X_trans %*% X)
+s_square_b
+```
+
+The answer for a(6) is $\begin{pmatrix}0.44&-0.22\\ -0.22&0.22\end{pmatrix}$
+
+### a 7
+
+```{r}
+X_h <- matrix(c(1,2), nrow = 2, ncol = 1)
+X_h_tran <- t(X_h)
+Y_h <- X_h_tran %*% b
+Y_h
+```
+
+The answer for a(7), Y_h here is 18.2
+
+### a 8
+
+```{r}
+s_square_yh <- MSE * (X_h_tran %*% inv(X_trans %*% X) %*% X_h)
+s_square_yh
+```
+
+The answer for a(8) is 0.44
+
+### b 1
+
+$s^2\left\{b_1\right\}$ is equal to 0.22
+
+### b 2
+
+$s\left\{b_0,b_1\right\}$ is -0.22
+
+### b 3
+
+```{r}
+sqrt(0.44)
+```
+
+$s\left\{b_0\right\}$ is 0.663
+
+
+### c
+
+```{r}
+J <- matrix(rep(1, 100), nrow = 10, ncol = 10)
+SSR <- H - 0.1*J
+SSR
+```
+
+The matrix of Quadratic form for SSR is shown above

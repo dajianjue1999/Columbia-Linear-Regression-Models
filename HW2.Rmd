@@ -1,0 +1,426 @@
+---
+title: "5205 HW2"
+author: "Daoyang E"
+date: "9/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1
+Continuing on the problem solving process in question 1, which is
+$\sum _{i=1}^n\left(e_i^2\right)\:=\:\sum _{i=1}^n\left(Y_i-\bar{Y}\right)^2-b_i^2\sum _{i=i}^n\left(X_i-\bar{X}\right)^2$.
+By definition, $SSE = \sum _{i=1}^n\left(e_i^2\right)\:$ and $SSTO = \sum _{i=1}^n\left(Y_i-\bar{Y}\right)^2$, in order to prove that MSE, which is $MSE = \frac{\sum \:_{i=1}^n\left(Y_i-\hat{Y}\right)^2}{n-2} = \frac{SSE}{n-2}$, to be an unbiased estimator for $\:\sigma ^2$, I will need to prove that $\sum _{i=1}^n\left(e_i^2\right)\:=\:\sum _{i=1}^n\left(Y_i-\bar{Y}\right)^2-b_i^2\sum _{i=i}^n\left(X_i-\bar{X}\right)^2$, which is $SSE = SSTO - b_i^2\sum \:_{i=i}^n\left(X_i-\bar{X}\right)^2$, actually leads to $SSE = SSTO - SSR$.
+
+This means that I want to prove that $SSR = b_i^2\sum \:_{i=i}^n\left(X_i-\bar{X}\right)^2$. 
+$b_i^2\sum \:_{i=i}^n\left(X_i-\bar{X}\right)^2 = \sum \:\:_{i=i}^nb_i^2\left(X_i-\bar{X}\right)^2\:$.
+Because $SSR = \sum _{i=1}^n\left(\hat{Y_i}-\bar{Y_i}\right)^2$, I want to analyze $\hat{Y_i}-\bar{Y_i}$. According to properties that $\bar{Y}=\:b_0+b_1\bar{X}$, $\hat{Y_i}=\:b_0+b_1X_i$. I could reasonably derive that $\hat{Y_i}-\bar{Y}=b_1X_i-b_1\bar{X}=b_1\left(X_i-\bar{X}\right)$.
+Taking $\hat{Y_i}-\bar{Y}=b_1\left(X_i-\bar{X}\right)$ into the equation $SSE = SSTO - \sum \:\:_{i=i}^nb_i^2\left(X_i-\bar{X}\right)^2\:$, I could get $SSE\:=\:SSTO\:-\:\sum \:_{i=1}^n\left(\hat{Y_i}-\bar{Y_i}\right)^2$, which leads to the equation $SSE = SSTO - SSR$.
+
+This process shows that there is no bias residing in SSE, so that MSE, which is $\frac{SSE}{n-2}$, is an unbiased estimator for $\sigma ^2$.
+
+## 2
+
+### a
+```{r}
+library(tibble)
+tibble2 <- tribble(
+  ~i, ~X_i,  ~Y_i,
+  1, 1, 16,
+  2, 0, 9,
+  3, 2, 17,
+  4, 0, 12,
+  5, 3, 22,
+  6, 1, 13,
+  7, 0, 8,
+  8, 1, 15,
+  9, 2, 19,
+  10, 0, 11
+)
+```
+
+```{r}
+summary(tibble2)
+```
+
+```{r}
+n = 10
+X_mean = 1
+Y_mean = 14.2
+tibble2$X_diff <- 1:10
+for (a in tibble2$i){
+  tibble2$X_diff[a] <- tibble2$X_i[a]- X_mean
+}
+tibble2$Y_diff <- 1:10
+for (a in tibble2$i){
+  tibble2$Y_diff[a] <- tibble2$Y_i[a]- Y_mean
+}
+tibble2$product_XY<-1:10
+for (a in tibble2$i){
+  tibble2$product_XY[a] <- tibble2$X_diff[a] * tibble2$Y_diff[a]
+}
+tibble2$X_diff_S <- 1:10
+for (a in tibble2$i){
+  tibble2$X_diff_S[a] <- tibble2$X_diff[a] ^ 2
+}
+```
+
+```{r}
+##getting b_1 and b_0
+(b_1 <- sum(tibble2$product_XY)/sum(tibble2$X_diff_S))
+(b_0 <- Y_mean - b_1 * X_mean)
+```
+
+```{r}
+tibble2$Y_hat <- 1:10
+for (a in tibble2$i){
+  tibble2$Y_hat[a] <- b_0 + b_1 * tibble2$X_i[a]
+}
+tibble2$SE <- 1:10
+for (a in tibble2$i){
+  tibble2$SE[a] <- (tibble2$Y_i[a]-tibble2$Y_hat[a])^2
+}
+##Getting MSE
+MSE <- sum(tibble2$SE)/(n-2)
+```
+
+```{r}
+## Getting variance for b1
+(b1_var <- MSE/sum(tibble2$X_diff_S))
+## get standard deviation
+(b1_std <- sqrt(b1_var))
+```
+
+```{r}
+## getting t critical value
+(t_95 <- qt(0.975, 8))
+```
+
+```{r}
+## getting confidence interval
+(conf_low <- b_1 - t_95 * b1_std)
+(conf_high <- b_1 + t_95 * b1_std)
+```
+I can interpret the results as, with 95% confidence, number of broken ampules would increase by a number between 2.918 and 5.082 with every additional number of time a cartoon is transferred.
+
+### b
+
+My null statement is $H_0: \beta_1=0$
+My alternative statement is $H_a:\beta_1\neq0$
+
+The level of significance is 0.05, so I would look at 0.95 percent confidence level.
+```{r}
+t_st <- b_1/b1_std
+t_st
+```
+
+```{r}
+t_95
+```
+
+```{r}
+p_val <- 2*pt(-abs(t_st),df=8)
+p_val
+```
+
+
+8.528 is greater than 2.306, so I would reject the null hypothesis and conclude that there is a linear relation between number of times a cartoon is transfered and number of broken ampules. P value here is 2.748669e-05.
+
+### c
+
+```{r}
+b0_var <- MSE * (1/10+X_mean^2/sum(tibble2$X_diff_S))
+b0_std <- sqrt(b0_var)
+b0_std
+```
+
+```{r}
+(b0_high<- b_0 + t_95 * b0_std)
+(b0_low <- b_0 - t_95 * b0_std)
+```
+
+I am 95% confident that when number of times a cartoon is transferred equals 0, number of broken ampules will fall in between 8.67 and 11.73.
+
+### d
+
+I would use $Y_0$ to stand for Y value at x = 0, $X_0$ to stand for X at 0
+The null hypothesis is $H_0:E(Y_0) <= 9$
+The alternative hypothesis is $H_a:E(Y_0) > 9$
+
+```{r}
+(Y0_hat_var <- MSE*(1/10+(0-X_mean)^2/sum(tibble2$X_diff_S)))
+(Y0_hat_std <- sqrt(Y0_hat_var))
+```
+
+```{r}
+t_st2 <- (b_0 - 9)/Y0_hat_std
+t_st2
+```
+
+```{r}
+p_val2 <- 2*pt(-abs(t_st2),df=8)
+p_val2
+```
+
+Here we see that the t statistic is 1.809, smaller than t at 0.025 a, thus we would accept the null hypothesis and conclude that when no transfers were made, number of broken ampules would not be greater than 9. P value here is 0.108.
+
+### e
+
+```{r}
+### power for b
+power_stat <- (2-0)/.5
+power_stat
+```
+according to power table, when a = 0.05, df = 8, power_stat = 4, power = 0.94 for question b.
+
+
+```{r}
+### power for d
+power_s <- (11 - 9)/.75
+power_s
+```
+power s is between 2 and 3
+
+```{r}
+.42 + (2.67-2)*(.75-.42)
+```
+
+so, if the true B1 is 11, the power of the test for question b would be 0.64
+
+## 3
+
+```{r echo=FALSE}
+tibble3<-tribble(
+~i,  ~X, ~Y,
+1,   3.897, 21,
+2, 3.885,    14,
+3, 3.778,    28,
+4, 2.540,    22,
+5, 3.028,    21,
+6, 3.865,    31,
+7, 2.962,    32,
+8, 3.961,    27,
+9, 0.500,    29,
+10, 3.178,    26,
+11, 3.310,    24,
+12, 3.538,    30,
+13, 3.083,    24,
+14, 3.013,    24,
+15, 3.245,    33,
+16, 2.963,    27,
+17, 3.522,    25,
+18, 3.013,    31,
+19, 2.947,    25,
+20, 2.118,    20,
+21, 2.563,    24,
+22, 3.357,    21,
+23, 3.731,    28,
+24, 3.925,    27,
+25, 3.556,    28,
+26, 3.101,    26,
+27, 2.420,    28,
+28, 2.579,    22,
+29, 3.871,    26,
+30, 3.060,    21,
+31, 3.927,    25,
+32, 2.375,    16,
+33, 2.929,    28,
+34, 3.375,    26,
+35, 2.857,    22,
+36, 3.072,    24,
+37, 3.381,    21,
+38, 3.290,    30,
+39, 3.549,    27,
+40, 3.646,    26,
+41, 2.978,    26,
+42, 2.654,    30,
+43, 2.540,    24,
+44, 2.250,    26,
+45, 2.069,    29,
+46, 2.617,    24,
+47, 2.183,    31,
+48, 2.000,    15,
+49, 2.952,    19,
+50, 3.806,    18,
+51, 2.871,    27,
+52, 3.352,    16,
+53, 3.305,    27,
+54, 2.952,    26,
+55, 3.547,    24,
+56, 3.691,    30,
+57, 3.160,    21,
+58, 2.194,    20,
+59, 3.323,    30,
+60, 3.936,    29,
+61, 2.922,    25,
+62, 2.716,    23,
+63, 3.370,    25,
+64, 3.606,    23,
+65, 2.642,    30,
+66, 2.452,    21,
+67, 2.655,    24,
+68, 3.714,   32,
+69, 1.806,    18,
+70, 3.516,    23,
+71, 3.039,    20,
+72, 2.966,    23,
+73, 2.482,    18,
+74, 2.700,    18,
+75, 3.920,    29,
+76, 2.834,    20,
+77, 3.222,    23,
+78, 3.084,    26,
+79, 4.000,    28,
+80, 3.511,    34,
+81, 3.323,    20,
+82, 3.072,    20,
+83, 2.079,    26,
+84, 3.875,    32,
+85, 3.208,    25,
+86, 2.920,    27,
+87, 3.345,    27,
+88, 3.956,    29,
+89, 3.808,    19,
+90, 2.506,    21,
+91, 3.886,    24,
+92, 2.183,    27,
+93, 3.429,    25,
+94, 3.024,    18,
+95, 3.750,    29,
+96, 3.833,    24,
+97, 3.113,    27,
+98, 2.875,    21,
+99, 2.747,    19,
+100, 2.311,    18,
+101, 1.841,    25,
+102, 1.583,    18,
+103, 2.879,    20,
+104, 3.591,    32,
+105, 2.914,    24,
+106, 3.716,    35,
+107, 2.800,    25,
+108, 3.621,    28,
+109, 3.792,    28,
+110, 2.867,    25,
+111, 3.419,    22,
+112, 3.600,    30,
+113, 2.394,    20,
+114, 2.286,    20,
+115, 1.486,    31,
+116, 3.885,    20,
+117, 3.800,    29,
+118, 3.914,    28,
+119, 1.860,    16,
+120, 2.948,    28,
+)
+```
+
+```{r}
+head(tibble3)
+```
+
+### a
+```{r}
+summary(tibble3)
+```
+
+```{r}
+Xm = 3.074
+Ym = 24.73
+```
+
+```{r}
+n = 120
+tibble3$X_diff <- 1:120
+for (a in tibble3$i){
+  tibble3$X_diff[a] <- tibble3$X[a]- Xm
+}
+tibble3$Y_total <- 1:120
+for (a in tibble3$i){
+  tibble3$Y_total[a] <- tibble3$Y[a]- Ym
+}
+tibble3$product_XY<-1:120
+for (a in tibble3$i){
+  tibble3$product_XY[a] <- tibble3$X_diff[a] * tibble3$Y_total[a]
+}
+tibble3$X_diff_S <- 1:120
+for (a in tibble3$i){
+  tibble3$X_diff_S[a] <- tibble3$X_diff[a] ^ 2
+}
+```
+
+```{r}
+(b1 <- sum(tibble3$product_XY)/sum(tibble3$X_diff_S))
+(b0 <- Ym - b1 * Xm)
+```
+
+```{r}
+tibble3$Y_hat <- 1:120
+for (a in tibble3$i){
+  tibble3$Y_hat[a] <- b0 + b1 * tibble3$X[a]
+}
+tibble3$SE <- 1:120
+for (a in tibble3$i){
+  tibble3$SE[a] <- (tibble3$Y[a]-tibble3$Y_hat[a])^2
+}
+```
+
+```{r}
+SSTO <- sum((tibble3$Y-Ym)^2)
+SSE <- sum(tibble3$SE)
+SSR <- sum((tibble3$Y_hat-Ym)^2)
+```
+
+```{r}
+ANOVA <- matrix(c(SSR, SSE, SSTO, 1, 118, 119, SSR/1, SSE/118, NA), ncol=3, byrow=FALSE)
+colnames(ANOVA) <- c('SS','df','MS')
+rownames(ANOVA) <- c('Regression','Error','Total')
+ANOVA <- as.table(ANOVA)
+ANOVA
+```
+
+### b
+
+MSR is 172.83, MSE is 18.547.
+If MSR and MSE estimates the same quantity, it means that the effect of the regression relation accounts for half the total variation in the Y observations.
+
+### c
+
+The null hypothesis is $H_0:\beta_1=0$
+The alternative hypothesis is $H_a:\beta_1\neq0$
+
+```{r}
+#f critical
+f_98<-qf(0.01, 1, 118)
+f_98
+```
+
+```{r}
+f_st <- SSR/(SSE/118)
+f_st
+```
+
+The f statistics, 9.24, is greater than the f critical value at 0.01 significance level, I would like to reject the null hypothesis and conclude that there is a relation between X and Y
+
+### d
+
+```{r}
+SSR/SSTO
+```
+
+The absolute magnitude of reduction in the variation of Y when X is introduced is SSR, which is 172.83.
+The relative reduction is SSR/SSTO, which equals 0.0726. The official name for the latter measure is coefficient of determination.
+
+### e
+
+```{r}
+r <- sqrt(SSR/SSTO)
+r
+```
+
+since b1 is greater than 0, r is also positive and equals to 0.2695
+
+### f
+$R^2$is a more clear-cut operational interpretation than r. Since $R^2$ describes the percent of the variance of Y that is explained by X, while r only talks about linear association between X and Y. Generally speaking, $R^2$ is more frequently used to describe the relationship between the two variables.

@@ -1,0 +1,105 @@
+---
+title: "5205 HW1"
+author: "Daoyang E"
+date: "9/19/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1
+In order to apply the second order partial derivative tests to show that the estimates is the minimum of the object function, I need to calculate the second order partial derivatives. As inidcated in the wikipedia page, the Jacobian of the gradient of a scalar function of several variables has a special name: the Hessian matrix, which in a sense is the "second derivative" of the function in question. 
+
+This means the the Jacobian matrix is what I want. The Jacobian matrix is $\begin{pmatrix}2xy&x^2\\ 5&cos\left(y\right)\end{pmatrix}$, and its determinant, as indicated, would be $2xycos\left(y\right)-5x^2$.
+
+In order to pass the second order partial derivative test, I have several methods. One is to show that the determinant and upper left corner of the matrix is greater than 0. The other is to prove that this matrix is postive definite, or say, its eignevalue are all greater than 0.
+
+I am not able to prove that $2xy$ or $2xycos\left(y\right)-5x^2$ to be greater tha 0, since neither x or y is defined. Similarly, I cannot calculate the matrix's eigenvalue with x and y unknown.
+
+But concerning the first derivative function analyzing $\beta_0$ and $\beta_1$, which is 
+$\frac{\partial Q}{\partial B_0}=-2\sum _{i=1}^N\left(Y_1-B_0-B_1X_i\right)$ and 
+$\frac{\partial Q}{\partial B_1}=-2\sum _{i=1}^NX_1\left(Y_1-B_0-B_1X_i\right)$, I could show them passing the second derivative test.The second partial derivative of Q, in hessian form would be 
+$\begin{pmatrix}2N&2NX_i\\ 2NX_i&2NX_i^2\end{pmatrix}$.
+
+2N and $2NX_i^2$ would be positive since 2, N and $X_i^2$ would all be positive. This is a 2*2 matrix with diagonals all greater than 0, which means that this matrix would be a postive definite matrix. These properties would prove that the second partial derivative test is passed and the least square estimates of betas in linear regression indeed generates the minimum of Q.
+
+## 2
+### a
+The estimated function would be $\hat{Y_i}=b_0+b_1X_i,\:i\:=\:1,\:2,...,45$
+
+```{r}
+library(readxl)
+Copier <- read_excel("C:/Users/edaoy/Desktop/5205/CH01PR20.xlsx", col_nam = c("Y","X"))
+Copier <- cbind(Copier,Copier[1])
+Copier <- Copier[2:3]
+View(Copier)
+```
+
+```{r}
+copier <- lm(Y ~ X, data = Copier)
+copier
+summary(copier)
+```
+
+As I see, the estimated function would be $\hat Y = -0.5802 + 15.0352X$.
+
+### b
+
+```{r}
+plot(Copier, X ~ Y, main = "Copier Maintenance")
+abline(copier)
+```
+
+I think the estimated regression line fit the data rather well.
+
+### c
+$b_0$ is the Y intercept of the regression line. Here, since the scope of the model does not cover X = 0, so $b_0$ does not have any particular meaning as a separate term in the regression model
+
+### d
+```{r}
+X_5 = copier$coefficients[1] + copier$coefficients[2]*5
+X_5
+```
+
+We can see that the intercept when X = 5 given by the estimated regression function would be `r X_5`.
+
+## 3
+### a
+The likelihood function here would be $L\left(\beta _1,\sigma ^2\right)=\prod _{i=0}^6\left(\frac{1}{\sqrt{2\pi \sigma ^2}}\right)e^{-\frac{1}{2\sigma ^2}\left(Y_i-\beta _1X_i\right)^2}$, since $\beta_0$ is not included.
+
+### b
+
+```{r}
+gamma_s = 16
+B_1 <- 17
+L_17 <- 1/((2*pi*gamma_s)^3)*exp(-1/(2*gamma_s)*((128-7*B_1)^2+(213-12*B_1)^2+(75-4*B_1)^2+(250-14*B_1)^2+(446-25*B_1)^2+(540-30*B_1)^2))
+B_1 <- 18
+L_18 <- 1/((2*pi*gamma_s)^3)*exp(-1/(2*gamma_s)*((128-7*B_1)^2+(213-12*B_1)^2+(75-4*B_1)^2+(250-14*B_1)^2+(446-25*B_1)^2+(540-30*B_1)^2))
+B_1 <- 19
+L_19 <- 1/((2*pi*gamma_s)^3)*exp(-1/(2*gamma_s)*((128-7*B_1)^2+(213-12*B_1)^2+(75-4*B_1)^2+(250-14*B_1)^2+(446-25*B_1)^2+(540-30*B_1)^2))
+```
+
+```{r}
+order(c(L_17,L_18,L_19),decreasing = TRUE)
+```
+We see that the likelihood will be largest when $\beta _1$ equals 18.
+
+### c
+```{r}
+L_max <- (7*128+12*213+4*75+14*250+25*446+30*540)/(7^2+12^2+4^2+14^2+25^2+30^2)
+L_max
+```
+
+I see that L_max is very close to 18, which is 17.9285. Meaning that the result is consistent.
+
+### d
+
+```{r}
+Beta_1 = seq(17,19,length=100)
+L= function(Beta_1){1/((2*pi*gamma_s)^3)*exp(-1/(2*gamma_s)*((128-7*Beta_1)^2+(213-12*Beta_1)^2+(75-4*Beta_1)^2+(250-14*Beta_1)^2+(446-25*Beta_1)^2+(540-30*Beta_1)^2))}
+plot(Beta_1,L(Beta_1),ylab="Likelihood between B_1 = 17 and B_1 = 19",xlab="B_1",type="l")
+```
+
+I can see that the line also corresponds to my precious calculation of maximum likelihood.

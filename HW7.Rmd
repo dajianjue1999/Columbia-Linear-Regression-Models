@@ -1,0 +1,116 @@
+---
+title: "HW7"
+author: "Daoyang E"
+date: "11/11/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+CH06PR15 <- read_csv("C:/Users/edaoy/Desktop/5205/CH06PR15.txt", 
+    col_names = FALSE)
+```
+
+```{r}
+library(tidyr)
+ch6 <- CH06PR15 %>% separate(X1, into = c("Yi", "Xi1", "Xi2", "Xi3"), sep = "   ")
+```
+
+
+```{r}
+ch6$Yi <- as.numeric(ch6$Yi)
+ch6$Xi1 <- as.numeric(ch6$Xi1)
+ch6$Xi2 <- as.numeric(ch6$Xi2)
+ch6$Xi3 <- as.numeric(ch6$Xi3)
+```
+
+###1.a
+
+```{r}
+library(olsrr)
+library(qpcR)
+library(stats)
+```
+
+```{r}
+model <- lm(Yi~., data = ch6)
+aprm <- ols_step_all_possible(model)
+aprm
+```
+
+```{r}
+PRESS <- function(linear.model) {
+    pr <- residuals(linear.model)/(1 - lm.influence(linear.model)$hat)
+    sum(pr^2)
+}
+PRESS(model)
+```
+
+```{r, warning=FALSE}
+plot(aprm)
+```
+
+```{r}
+#best predictor for R squared
+aprm$predictors[which.max(aprm$rsquare)]
+```
+
+```{r}
+#best predictor for adjusted r squared
+aprm$predictors[which.max(aprm$adjr)]
+```
+
+```{r}
+#best predictor for cp
+aprm$predictors[which.min(aprm$cp)]
+```
+
+```{r}
+#best predictor for aic
+aprm$predictors[which.min(aprm$aic)]
+```
+
+My graphs and data supported that X1 and X3 together would be the best subset for predicting patient satisfaction according to the criterias such as $R^2_a$, $AIC_p$, and $C_p$
+$R^2_p$ indicates that X1, X2, X3 together would be the best subset
+
+### 1.b
+
+The four criteria does not identify the same criteria. $R^2_p$ gives different results from others. 
+This would often happen since $R^2_p$ would always give the subset with the most amount of predictors.
+
+### 1.c
+
+Forward step regression would not have advantages here, since both forward step regression and  all-possible-regression procedure would need to calculate from X1 up to X3.
+
+
+### 2.a
+
+```{r}
+null=lm(Yi~1, data=ch6)
+step(null, scope=list(lower=null, upper=model), direction="forward")
+```
+
+### 2.b
+according to the f table at the back of the book, it will be a bit lower than 0.1 significant level
+
+### 2.c
+```{r}
+step_forward <- ols_step_forward_p(model, details = TRUE)
+```
+
+As I notice, the model selected will be with parameter X1 and X3.
+
+### 2.d
+
+```{r}
+step_backward <- ols_step_backward_p(model, details = TRUE)
+```
+
+As I notice, the parameter selected is still X1 and X3.
+
+### 2.e
+Apparently, the three selection process gives the same result, which means that they are consistent. Also, Comparing the results with the all possible regression results before. The results are the same generally.

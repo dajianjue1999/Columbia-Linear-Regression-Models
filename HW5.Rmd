@@ -1,0 +1,163 @@
+---
+title: "hw5"
+author: "Daoyang E"
+date: "10/27/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(readr)
+CH06PR15 <- read_csv("C:/Users/edaoy/Desktop/5205/CH06PR15.txt", 
+    col_names = FALSE)
+```
+
+```{r}
+library(tidyr)
+ch6 <- CH06PR15 %>% separate(X1, into = c("Yi", "Xi1", "Xi2", "Xi3"), sep = "   ")
+```
+
+
+### 1.a
+
+```{r}
+ch6$Yi <- as.numeric(ch6$Yi)
+ch6$Xi1 <- as.numeric(ch6$Xi1)
+ch6$Xi2 <- as.numeric(ch6$Xi2)
+ch6$Xi3 <- as.numeric(ch6$Xi3)
+```
+
+```{r}
+stem(ch6$Xi1)
+```
+
+```{r}
+stem(ch6$Xi2)
+```
+
+```{r}
+stem(ch6$Xi3)
+```
+
+### 1. b
+
+```{r}
+pairs(ch6)
+```
+
+```{r}
+library(corrplot)
+corrplot(cor(ch6))
+```
+
+### 1.c
+
+```{r}
+model1 <- lm(Yi~Xi1 + Xi2 + Xi3, data = ch6, method = "qr")
+```
+
+```{r}
+summary(model1)
+```
+
+The estimated regression function is $\hat Y = 158.4913 - 1.1416X_1 - 0.442X_2-13.4702X_3$, b2 here interprets that holding x1 and x3 constant, one unit increase in x2 will lead to 0.442 unit decrease in Y predicted.
+
+### 1.d
+```{r}
+boxplot(model1$residuals)
+```
+
+I don't see the existence of outliers
+
+### 1.e
+
+```{r}
+ch6$Y_fitted <- model1$fitted.values
+ch6$resid <- model1$residuals
+```
+
+```{r}
+plot(ch6)
+```
+
+```{r}
+new_resid <- sort(ch6$resid)
+z = 1:46
+for(i in 1:46){
+  z[i] = qnorm((i-0.375)/(46+0.25))
+}
+MSE <- sum((model1$resid^2)/42)
+
+expected = 1:46
+for(i in 1:46){
+  expected[i] <- z[i] * sqrt(MSE)
+}
+plot(expected, new_resid, xlab = "Expected", ylab = "Residual", main = "Normal Probability Plot")
+```
+
+The residual seems to be uncoorelated with other terms, and the normality plot also behaves well. But I did notice there seems no be correlation between x1 and x2, x1 and x3, x2 and x3.
+
+### 1 f
+No, I don't see repeated trials of x1, x2, x3 remaining unchanged.
+
+### 1 g
+```{r}
+library(lmtest)
+bptest(model1)
+```
+
+The null hypothesis is that the error variance is constant. The alternative hypothesis is that the error variance is not constant. From the book, I know that the chi square test statistics for a = 0.01 and df = 3 will be 11.3449.
+2.5583 < 11.3449. Thus I will conclude the null hypothesis.
+
+
+### 2 a
+
+```{r}
+model2 <- lm(Yi~Xi2 + Xi1 + Xi3, data = ch6, method = "qr")
+anova(model2)
+```
+
+I see that extra SSR for X2 is 4860.3, extra SSR with X1 given X2 is 3896, extra SSR with X3 given X1 and X2 is 364.2
+
+### 2 b
+
+```{r}
+SSR_x3 <- anova(model2)[3,2]
+SSE <- anova(model2)[4,2]
+MSE <- SSE/(46-4)
+f <- (SSR_x3/1)/MSE
+f
+```
+
+```{r}
+qf(0.975, 1, 42)
+```
+
+Null hypothesis is $H_0:\beta_3 = 0$, alternative hypothesis is $H_1:\beta_3\neq0$.
+Here 3.5997 < 5.404, the f test statistic at a = 0.025 and df = 1 and 42. Thus I conclude that null hypothesis is true and I could drop X3 from the regression model.
+P-value = 0.06468
+
+
+### 3
+
+```{r}
+anova(model1)
+```
+
+```{r}
+SSR_x2x3 <- anova(model1)[2,2] + anova(model2)[3,2]
+fs <- (SSR_x2x3/2)/MSE
+fs
+```
+
+```{r}
+qf(0.975, 2, 42)
+```
+
+Here the null hypothesis is $H_0:\beta_2=\beta_3=0$, alternative hypothesis is that null hypothesis is not true.
+
+Here 4.17 > 4.03, which is the f test statistics, thus I would conclude that I reject the null hypothesis and conclude that X2 and X3 cannot be excluded from the model.
+P-value for this question should be a bit smaller than 0.025.
