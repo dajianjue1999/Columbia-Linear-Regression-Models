@@ -1,0 +1,178 @@
+---
+title: "hw8"
+author: "Daoyang E"
+date: "11/16/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(readr)
+library(tidyr)
+library(matlib)
+library(modelr)
+CH06PR15 <- read_csv("C:/Users/edaoy/Desktop/5205/CH06PR15.txt", 
+    col_names = FALSE)
+```
+
+
+```{r}
+ch6 <- CH06PR15 %>% separate(X1, into = c("Yi", "Xi1", "Xi2", "Xi3"), sep = "   ")
+```
+
+
+```{r}
+ch6$Yi <- as.numeric(ch6$Yi)
+ch6$Xi1 <- as.numeric(ch6$Xi1)
+ch6$Xi2 <- as.numeric(ch6$Xi2)
+ch6$Xi3 <- as.numeric(ch6$Xi3)
+```
+
+
+```{r}
+X <- ch6[,2:4]
+X <- as.matrix(X)
+X_trans <- t(X)
+H <- X %*% inv(X_trans%*%X) %*% X_trans
+```
+
+
+### a
+
+```{r}
+model <- lm(Yi~Xi1 + Xi2 + Xi3, data = ch6)
+residuals <- summary(model)$residuals
+ch6 <- cbind(ch6, residuals)
+ch6$hii <- 0
+for(i in 1:46){
+  ch6$hii[i] = H[i,i]
+}
+
+anova(model)
+SSE <- anova(model)[4,2]
+```
+
+```{r}
+library(dplyr)
+ch6 <- ch6 %>% mutate(ti = residuals * sqrt(41/(SSE*(1-hii)-residuals^2)))
+```
+
+```{r}
+qt(1-0.1/(2*46),41)
+```
+
+```{r}
+ch6 %>% filter(ti > 3.27)
+```
+
+The null hypothesis is that $H_0$:there is no outlier.
+The decision rule is using bonferroni simultaneous test procedure with a= 0.1.
+Since I see that there is no studentized deleted residuals greater than the test statistics 3.27.
+So I concluded that there is no outlying Y observations
+
+### b
+
+```{r}
+h_hat <- 4/46
+ch6 %>% filter(hii >2 * h_hat)
+```
+
+I see that there is no X leverage value greater than 2p/n, so I conclude that there is no outlying X values.
+
+### c
+
+```{r}
+X_new <- c(30,58,2)
+t(X_new)%*%inv(t(X)%*%X)%*%X_new
+```
+
+```{r}
+t(X_new)%*%inv(t(X)%*%X)%*%X_new > 2*h_hat
+```
+
+The new h is much greater than the leverage values, indicating a hidden extrapolation
+
+### d
+
+```{r}
+#DFFITS
+
+#case11
+ch6$ti[11] * sqrt(ch6$hii[11]/(1-ch6$hii[11]))
+#case17
+ch6$ti[17] * sqrt(ch6$hii[17]/(1-ch6$hii[17]))
+#case27
+ch6$ti[27] * sqrt(ch6$hii[27]/(1-ch6$hii[27]))
+```
+
+For DFFITS criteria, none of case 11, 17, 27 are influential cases
+
+```{r}
+#cooks
+MSE <- anova(model)[4,3]
+#case11
+(ch6$residuals[11]^2)/(4 * MSE)*(ch6$hii[11]/(1-ch6$hii[11])^2)
+#case 17
+(ch6$residuals[17]^2)/(4 * MSE)*(ch6$hii[17]/(1-ch6$hii[17])^2)
+#case 27
+(ch6$residuals[27]^2)/(4 * MSE)*(ch6$hii[27]/(1-ch6$hii[27])^2)
+```
+All the cook's distance value is very small, inficating no influential cases
+
+```{r}
+#DFBETAS
+
+dfbetas <- as.data.frame(dfbetas(model))
+dfbetas[c(11,17,27),]
+```
+
+There is no beta exceeding 1 in DFBETAS case, concluding that none of the three cases is influential
+
+### e
+```{r}
+#without case 11
+wo11 <- ch6[-11,]
+model11 <- lm(Yi~Xi1 + Xi2+ Xi3, data = wo11)
+coef11<- model11$coefficients
+ch6 <- ch6 %>% mutate(Y11 = coef11[1]+coef11[2]*Xi1 + coef11[3]*Xi2+coef11[4]*Xi3) 
+sum((ch6$Y11-ch6$Yi)/ch6$Yi)*100/46
+
+```
+
+```{r}
+#without case 17
+wo17 <- ch6[-17,]
+model17 <- lm(Yi~Xi1 + Xi2+ Xi3, data = wo17)
+coef17<- model17$coefficients
+ch6 <- ch6 %>% mutate(Y17 = coef17[1]+coef17[2]*Xi1 + coef17[3]*Xi2+coef17[4]*Xi3) 
+sum((ch6$Y17-ch6$Yi)/ch6$Yi)*100/46
+```
+
+```{r}
+#without case 27
+wo27 <- ch6[-27,]
+model27 <- lm(Yi~Xi1 + Xi2+ Xi3, data = wo27)
+coef27<- model27$coefficients
+ch6 <- ch6 %>% mutate(Y27 = coef27[1]+coef27[2]*Xi1 + coef27[3]*Xi2+coef27[4]*Xi3) 
+sum((ch6$Y27-ch6$Yi)/ch6$Yi)*100/46
+```
+
+None of the percentage is above 5 percent, meaning that they are not influential cases
+
+### f
+```{r}
+ch6 <- ch6 %>% mutate(cook = (residuals^2)/(4 * MSE)*(hii/(1-hii)^2))
+ch6$index = 1:46
+```
+
+
+```{r}
+ggplot(data = ch6, aes(x = index, y = cook))+
+  geom_point()+
+  geom_line()+
+  labs(title = "Index Influence Plot",
+        x = "Cook's Distance D",
+        y = "Case Index Number")
+```
+

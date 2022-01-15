@@ -1,0 +1,27 @@
+---
+title: "hw9"
+author: "Daoyang E"
+date: "12/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 1
+if residuals show nonconstancy of error variance, then the standard error of the parameters would be inconsistent. In this case, the hypothesis testing would be not valid and the regression results are completely invalid.
+
+## 2
+Robust regression is used to minimize the influence of outliers, but their influence is not wiped out.
+
+## 3
+LOWESS creates a smooth line through a timeplot or scatter plot to help you to see relationship between variables and foresee trends.
+The curse of dimensionality refers to the case that, when the dimensionality increases, the volume of the space increases so fast that the available data become sparse. This sparsity is problematic for any method that requires statistical significance.
+
+## 4
+To build a regression tree, we are generally splitting one whole region into different small regions in different splitting points. If there is only small amount of sample size, there will not be many choice for splitting points, making difficulty for the tree growing. If there are too many predictors, it will be costly to determine a splitting point.
+
+## 5
+Bootstrapping can be used to get confidence intervals based on the (a/2) 100 and (1 - a/2) 100 percentiles of the bootstrap distribution of b_1.
+Ridge regression is just adding a restriction term on normal linear regression, so the process for analysis is generally the same.

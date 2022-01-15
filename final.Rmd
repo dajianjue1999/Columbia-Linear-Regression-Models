@@ -1,0 +1,397 @@
+---
+title: "final project"
+author: "Daoyang E"
+date: "1/12/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(car)
+library(readr)
+library(dplyr)
+library(tidyverse)
+library(stringr)
+library(randomForest)
+library(tree)
+library(rpart)
+library(rpart.plot)
+library(ggplot2)
+library(fastDummies)
+library(MASS)
+library(caret)
+library(ROCR)
+library(broom)
+```
+
+```{r}
+# load the dataset
+bank <- read_delim("C:/Users/edaoy/Desktop/5205/final project/bank-additional/bank-additional/bank-additional.csv", 
+    delim = ";", escape_double = FALSE, na = "NA", 
+    trim_ws = TRUE)
+```
+
+  1 - age (numeric)
+   2 - job : type of job (categorical: "admin.","blue-collar","entrepreneur","housemaid","management","retired","self-employed","services","student","technician","unemployed","unknown")
+   3 - marital : marital status (categorical: "divorced","married","single","unknown"; note: "divorced" means divorced or widowed)
+   4 - education (categorical: "basic.4y","basic.6y","basic.9y","high.school","illiterate","professional.course","university.degree","unknown")
+   5 - default: has credit in default? (categorical: "no","yes","unknown")
+   6 - housing: has housing loan? (categorical: "no","yes","unknown")
+   7 - loan: has personal loan? (categorical: "no","yes","unknown")
+   # related with the last contact of the current campaign:
+   8 - contact: contact communication type (categorical: "cellular","telephone") 
+   9 - month: last contact month of year (categorical: "jan", "feb", "mar", ..., "nov", "dec")
+  10 - day_of_week: last contact day of the week (categorical: "mon","tue","wed","thu","fri")
+  11 - duration: last contact duration, in seconds (numeric). Important note:  this attribute highly affects the output target (e.g., if duration=0 then y="no"). Yet, the duration is not known before a call is performed. Also, after the end of the call y is obviously known. Thus, this input should only be included for benchmark purposes and should be discarded if the intention is to have a realistic predictive model.
+   # other attributes:
+  12 - campaign: number of contacts performed during this campaign and for this client (numeric, includes last contact)
+  13 - pdays: number of days that passed by after the client was last contacted from a previous campaign (numeric; 999 means client was not previously contacted)
+  14 - previous: number of contacts performed before this campaign and for this client (numeric)
+  15 - poutcome: outcome of the previous marketing campaign (categorical: "failure","nonexistent","success")
+   # social and economic context attributes
+  16 - emp.var.rate: employment variation rate - quarterly indicator (numeric)
+  17 - cons.price.idx: consumer price index - monthly indicator (numeric)     
+  18 - cons.conf.idx: consumer confidence index - monthly indicator (numeric)     
+  19 - euribor3m: euribor 3 month rate - daily indicator (numeric)
+  20 - nr.employed: number of employees - quarterly indicator (numeric)
+
+  Output variable (desired target):
+  21 - y - has the client subscribed a term deposit? (binary: "yes","no")
+
+Missing Attribute Values: There are several missing values in some categorical attributes, all coded with the "unknown" label. These missing values can be treated as a possible class label or using deletion or imputation techniques. 
+
+
+
+
+```{r}
+# take a look at the summary of the dataset
+summary(bank)
+```
+
+
+```{r}
+#drop NA value and reclassify the education parameter
+bank1 <- bank %>% drop_na() %>% mutate(education = case_when(education %in% c('basic.4y','basic.6y','basic.9y','high.school','illiterate') ~ "high school and lower",
+                                      education == "professional.course" ~ "professional course",
+                                      education == "university.degree" ~ "university",
+                                      education == "unknown" ~ "unknown"))
+```
+
+```{r}
+#drop all the unknown term
+bank1 <- bank1 %>% filter(job != "unknown" & marital != "unknown" & education != "unknown" & default != "unknown" & housing != "unknown" & loan != "unknown")
+```
+
+```{r}
+#reclassify age into a categorical variable
+bank1 <- bank1 %>% mutate(age = case_when(age < 18 & age > 0 ~ "teenager",
+                                 age >= 18 & age < 30 ~ "youth",
+                                 age >= 30 & age < 55 ~ "midage",
+                                 age >= 55 ~ "the old"))
+```
+
+```{r}
+#rename column name
+bank1 <- bank1 %>% dplyr:: rename("loan_default" = "default",
+                 "housing_loan" = "housing",
+                 "personal_loan" = "loan",
+                 "communication_type" = "contact",
+                 "contact_month" = "month",
+                 "contact_day" = "day_of_week",
+                 "term_deposit_subscription" = "y")
+```
+
+```{r}
+#plot a plot count the number of clients subscribing a term deposit
+ggplot(data = bank1, aes(x = term_deposit_subscription))+
+  geom_bar(aes(fill = term_deposit_subscription))+
+  labs(title = "Has the client subscribed a term deposit?",
+       fill = "Term Deposit Subscription",
+       x = "Term Deposit Subscription")
+```
+
+
+```{r}
+#calculate the percentage of subcription
+Yes <- sum(bank1$term_deposit_subscription == "yes")
+No <- sum(bank1$term_deposit_subscription == "no")
+print(paste("percentage of no subscription is ", round(No/(Yes+No)*100, 2), sep = ""))
+print(paste("percentage of subscription is ", round(Yes/(Yes+No)*100, 2), sep = ""))
+```
+
+```{r}
+#calculate mean of numerical variables grouped by job type
+bank1 %>% group_by(job)%>% summarize(mean_duration = mean(duration),
+                                     mean_campaign = mean(campaign),
+                                     mean_pdays = mean(pdays),
+                                     mean_previous = mean(previous),
+                                     mean_emp.var.rate = mean(emp.var.rate),
+                                     mean_cons.price.idx = mean(cons.price.idx),
+                                     mean_cons.conf.idx = mean(cons.conf.idx),
+                                     mean_euribor3m = mean(euribor3m),
+                                     mean_nr.employed = mean(nr.employed))
+```
+
+```{r}
+#plot the purchase frequency for job title
+ggplot(bank1)+
+  geom_bar(mapping=aes(x=job,fill=term_deposit_subscription),width=0.8 ,position = 'dodge')+
+  theme(axis.text.x = element_text(angle = 45, hjust = 0.5, vjust = 0.5))+
+  labs(title = "Purchase Frequency for Job Title",x="")+
+  theme_bw()
+```
+
+```{r}
+#calculate mean of numerical variables grouped by marital status
+bank1 %>% group_by(marital)%>% summarize(mean_duration = mean(duration),
+                                     mean_campaign = mean(campaign),
+                                     mean_pdays = mean(pdays),
+                                     mean_previous = mean(previous),
+                                     mean_emp.var.rate = mean(emp.var.rate),
+                                     mean_cons.price.idx = mean(cons.price.idx),
+                                     mean_cons.conf.idx = mean(cons.conf.idx),
+                                     mean_euribor3m = mean(euribor3m),
+                                     mean_nr.employed = mean(nr.employed))
+```
+
+```{r}
+#plot the purchase frequency for marital
+ggplot(bank1)+
+  geom_bar(mapping=aes(x=marital,fill=term_deposit_subscription),width=0.8)+
+  theme(axis.text.x = element_text(size=10))+
+  labs(title = "Bar Chart of Marital Status vs Purchase",x="")
+```
+
+```{r}
+#calculate mean of numerical variables grouped by education level
+bank1 %>% group_by(education)%>% summarize(mean_duration = mean(duration),
+                                     mean_campaign = mean(campaign),
+                                     mean_pdays = mean(pdays),
+                                     mean_previous = mean(previous),
+                                     mean_emp.var.rate = mean(emp.var.rate),
+                                     mean_cons.price.idx = mean(cons.price.idx),
+                                     mean_cons.conf.idx = mean(cons.conf.idx),
+                                     mean_euribor3m = mean(euribor3m),
+                                     mean_nr.employed = mean(nr.employed))
+```
+
+```{r}
+#plot the purchase frequency for education
+ggplot(bank1)+
+  geom_bar(mapping=aes(x=education,fill=term_deposit_subscription),width=0.8)+
+  theme(axis.text.x = element_text(size=10))+
+  labs(title = "Bar Chart of Education Status vs Purchase",x="")
+```
+
+```{r}
+# he plot of count of term deposit subscription against the last contact day of week
+ggplot(bank1)+
+  geom_bar(mapping=aes(x = contact_day, fill = term_deposit_subscription), width = 0.5, position = "dodge")+
+  labs(title = "Purchase Frequency for Last Contact Day of Week",
+       x = "Last Contact Day",
+       fill = "Term Deposit Subscription")
+```
+
+
+```{r}
+#plot the the plot of count of term deposit subscription against the last contact month
+ggplot(bank1)+
+  geom_bar(mapping=aes(x = contact_month, fill = term_deposit_subscription), width = 0.5, position = "dodge")+
+  labs(title = "Purchase Frequency for Last Contact Month",
+       x = "Last Contact Month",
+       fill = "Term Deposit Subscription")
+```
+
+```{r}
+#plot the the plot of count of term deposit subscription against age group
+ggplot(bank1)+
+  geom_bar(mapping=aes(x = age, fill = term_deposit_subscription), width = 0.5, position = "dodge")+
+  labs(title = "Purchase Frequency for Different Age Group",
+       x = "Age Group",
+       fill = "Term Deposit Subscription")
+```
+
+
+```{r}
+#plot the the plot of count of term deposit subscription against outcome of previous marketing campaign
+ggplot(bank1)+
+  geom_bar(mapping=aes(x = poutcome, fill = term_deposit_subscription), width = 0.5, position = "dodge")+
+  labs(title = "Purchase Frequency concerning outcome of previous marketing campaign",
+       x = "Outcome of Previous Marketing Campaign",
+       fill = "Term Deposit Subscription")
+```
+
+
+```{r}
+#factor bank1 term_deposit_subscription parameter
+bank1$term_deposit_subscription <- factor(bank1$term_deposit_subscription)
+#create dummy variable using all the categorical variables and drop all the base terms for dummy variable creation
+bank1 <- dummy_cols(bank1, select_columns = c('term_deposit_subscription', 
+                                              "job",
+                                              "age",
+                                              "marital",
+                                              "education",
+                                              "loan_default",
+                                              "housing_loan",
+                                              "personal_loan",
+                                              "communication_type",
+                                              "contact_month",
+                                              "contact_day",
+                                              "poutcome"))%>%
+  dplyr::select(-age, -job, -marital, -education, -loan_default, -housing_loan, -personal_loan, -communication_type, -contact_month, -contact_day,
+         -poutcome, -term_deposit_subscription, -term_deposit_subscription_no, -loan_default_no, -housing_loan_no, -personal_loan_no,
+         )%>%
+  dplyr::select(term_deposit_subscription_yes, everything())
+```
+
+```{r}
+#create training, test and validation set
+Samples<-sample(seq(1,3),size=nrow(bank1),replace=TRUE,prob=c(0.8,0.2,0.2))
+Train<-bank1[Samples==1,]
+Test<-bank1[Samples==2,]
+Validate<-bank1[Samples==3,]
+```
+
+```{r}
+#build a full logistic regression model
+full.model <- glm(term_deposit_subscription_yes ~., data = Train, family = binomial)
+summary(full.model)
+```
+
+```{r}
+#choose the best set of parameters using stepwise method
+step.model <- full.model %>% stepAIC(trace = FALSE)
+```
+
+```{r}
+#summary
+summary(step.model)
+```
+
+```{r}
+#calculate the residuals and check assumptions (using step model)
+res <- residuals(step.model)
+plot(x=fitted(step.model),y=res,xlim = c(-0.2,1),ylim=c(-3,3),main="Residuals vs Fitted Values")
+abline(h=0,lty=2,col="grey")
+lines(lowess(predict(step.model),res),col="red",lwd=2)
+```
+
+```{r}
+# Identify influential values
+plot(step.model, which = 4, id.n = 3)
+model.data <- augment(step.model) %>% 
+  dplyr::mutate(index = 1:n())
+model.data %>% top_n(3, .cooksd)
+ggplot(model.data, aes(index, .std.resid)) + 
+  geom_point(aes(color = term_deposit_subscription_yes),alpha=0.5)+
+  theme_bw()
+model.data %>% 
+  filter(abs(.std.resid) > 3)
+```
+From the results above, we can see there are 3 influential values in our data. However, we don't know why they are influential outliers. Hence, we still use the orginal data and this model in the following analysis.
+
+
+
+
+
+```{r}
+#Multicollinearity
+car::vif(step.model)
+```
+As a rule of thumb, a VIF value that exceeds 5 or 10 indicates a problematic amount of collinearity. In our example, there is no collinearity: all variables have a value of VIF well below 5.
+
+
+```{r}
+#F-test of the step model
+varible.new <- names(step.model$coefficients)[-1]
+bank2 <- bank1[,c("term_deposit_subscription_yes",varible.new)]
+linearHypothesis(step.model, varible.new)
+```
+Hence, we rejet H0.
+
+
+```{r}
+# Make predictions using full model on test set
+probabilities <- full.model %>% predict(Test, type = "response")
+predicted.classes <- ifelse(probabilities > 0.5, 1, 0)
+# Prediction accuracy between full model and test set
+observed.classes <- Test$term_deposit_subscription_yes
+mean(predicted.classes == observed.classes)
+```
+
+```{r}
+# Make predictions using step model on test set
+probabilities.step <- predict(step.model, Test, type = "response")
+predicted.classes.step <- ifelse(probabilities.step > 0.5, 1, 0)
+# Prediction accuracy between step model and test set
+p_class <- factor(predicted.classes.step, levels = levels(Test$term_deposit_subscription_yes))
+Test$term_deposit_subscription_yes <- factor(Test$term_deposit_subscription_yes)
+p_class <- factor(predicted.classes.step, levels = levels(Test$term_deposit_subscription_yes))
+Test$term_deposit_subscription_yes <- factor(Test$term_deposit_subscription_yes)
+confusionMatrix(p_class, Test$term_deposit_subscription_yes)
+```
+
+Accuracy of being  $True positive / (True Positive + False Positive)$
+
+Sensitivity of being our $ True Positive/ Positive$
+
+Specificity of being our $True Negative/Negative$
+
+
+
+
+
+```{r}
+roc_pred <- prediction(predictions = probabilities.step, labels = Test$term_deposit_subscription_yes)
+roc_perf <- performance(roc_pred , "tpr" , "fpr")
+plot(roc_perf,
+     print.cutoffs.at= seq(0,1,0.05),
+     text.cex = 0.7,
+     text.adj=c(-0.2,1.7),
+     main = "ROC Curve")
+```
+The x axis is the false positive rate and the y axis is the true positive rate. We can see each of the points represents a confusion matrix (like we created above) which we don’t have to evaluate manually. The points represent the tradeoff between true positive and false positive. By looking at the graph we can choose the optimal threshold depending on how many false positives(FP) we are willing to accept.
+
+
+
+
+
+```{r}
+(auc_ROCR <- performance(roc_pred, measure = "auc"))
+(auc_ROCR <- auc_ROCR@y.values[[1]])
+```
+We can also calculate the area under the ROC curve. If we look at the area under the curve a perfect model would give an AUC of exactly 1.00 and the average AUC for a random model is .5 (no better than random guessing) as the plot represents a diagonal line. AUC is a single number summary that allows us to evaluate the model accuracy without looking at confusion matrices. 
+
+
+```{r}
+#Use the variables in step model and the data in the original set to get a new model
+varible.new <- names(step.model$coefficients)[-1]
+bank2 <- bank1[,c("term_deposit_subscription_yes",varible.new)]
+full.model.new <- glm(term_deposit_subscription_yes ~., data = bank2, family = binomial)
+summary(full.model.new)
+```
+
+```{r}
+# Make predictions using full model on the whole data set
+probabilities.whole <- full.model.new %>% predict(Validate, type = "response")
+predicted.classes.whole <- ifelse(probabilities.whole > 0.5, 1, 0)
+# Prediction accuracy between whole data set and validation set
+p_class2 <- factor(predicted.classes.whole, levels = levels(Validate$term_deposit_subscription_yes))
+Validate$term_deposit_subscription_yes <- factor(Validate$term_deposit_subscription_yes)
+confusionMatrix(p_class2, Validate$term_deposit_subscription_yes)
+```
+
+```{r}
+roc_pred2 <- prediction(predictions = probabilities.whole, labels = Validate$term_deposit_subscription_yes)
+roc_perf2 <- performance(roc_pred2 , "tpr" , "fpr")
+plot(roc_perf2,
+     print.cutoffs.at = seq(0,1,0.05),
+     text.cex = 0.7,
+     text.adj=c(-0.2,1.7),
+     main = "ROC Curve")
+```
+
+```{r}
+(auc_ROCR <- performance(roc_pred2, measure = "auc"))
+(auc_ROCR <- auc_ROCR@y.values[[1]])
+```
